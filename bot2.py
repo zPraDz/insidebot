@@ -5,10 +5,10 @@ from twisted.internet import reactor, task
 from gzip import GzipFile
 from StringIO import StringIO
 from sys import stdout
-import struct, socket, time,  math, array, re
+import struct, socket, time, math, array, re
 ## other libraries
 import mechanize
-import numpy
+##import numpy
 
 stored = False
 
@@ -171,9 +171,10 @@ class DrawBot:
                            "backup"    :"backup <filename> - backs the map up to a file",
                            "restore"   :"restore <filename> - restores to a backup",
                            "sponge"    :"sponge - helps with water cleanup.",
-                           "erase"     :"erase <type> - erases blocks of that type",
-                           "replace"   :"replace <old>,<new> - replaces with new tiles",
-                           "say"       :"say <msg> - Makes the bot say something."}
+                           "erase"     :"erase <type> - erases blocks of that type"
+                           ##"replace"   :"replace <old>,<new> - replaces with new tiles",
+                           ##"say"       :"say <msg> - Makes the bot say something."
+                           }
 
         self.onReset(silent=True)
 
@@ -191,6 +192,22 @@ class DrawBot:
         self.filename   = None          ## Used by copy/paste
         self.restore_filename = None    ## Used by restore
 
+    def canUseBot(self,user):
+        ## The bot (pid: 255) is trying to use itself.
+        if self.bot.players[255].name == user:
+            return False
+
+        user = user.lower()
+
+        try:
+            with open("users.txt", "r") as f:
+                for line in f:
+                    if line == user:
+                        return True
+            return False
+        except:
+            return True
+
     def onMessage(self,pid,line):
         if not ":" in line:
             return
@@ -200,11 +217,13 @@ class DrawBot:
         msg   = words[1]
 
         print "User: [%s], message: [%s]"%(user,msg)
-
-
 #####
 ##### ToDo: Cleanup this section!
 #####
+        if (msg.split(" ")[0].replace(self.CMD_PREFIX, '') in self.cmd_help) and not self.canUseBot(user):
+            self.bot.sendMessage("I'm sorry, but you can't use this bot.")
+            return
+
         if not " " in msg:
             ## Check for no argument commands
             if msg == self.CMD_PREFIX + "reset":
@@ -278,8 +297,10 @@ class DrawBot:
     def Restore(self):
         try:
             f = open(self.restore_filename+".backup","rb")
-            header = f.read(12)
-            backup_array = numpy.fromfile(f,dtype="uint8")
+            header_x, header_y, header_z = struct.unpack('!3i',f.read(12))
+            ##backup_array = numpy.fromfile(f,dtype="uint8")
+            backup_array = array.array('B')
+            backup_array.fromfile(f,header_x*header_y*header_z)
             x1,y1,z1 = self.first_pos
             x2,y2,z2 = self.second_pos
             if x1 > x2 : x1, x2 = x2, x1
@@ -462,7 +483,8 @@ class DrawBot:
         ### built into the bot and then composes a string listing them
         ### instead of using a hard-coded string.
         if not arg:
-            self.bot.sendMessage("Commands: .reset .drawline .cuboid .goaway .abort")
+            cmds = str( self.cmd_help.keys() ).replace(",","").replace("[","").replace("]","").replace("'","")
+            self.bot.sendMessage("Cmds: %s"%cmds)
         elif arg in self.cmd_help:
             self.bot.sendMessage(self.cmd_help[arg])
 
@@ -762,13 +784,16 @@ class MinecraftBot:
         with open("level.data","w") as f:
             f.write(data)
 
-        self.block_array = numpy.frombuffer(data, dtype="uint8")
+        ##self.block_array = numpy.frombuffer(data, dtype="uint8")
+        self.block_array = array.array('B')
+        self.block_array.fromstring(data)
         print "Number of blocks received in file: %s"%num_blocks
-        print "Number of elements in the array :%s"%self.block_array.size
+        print "Number of elements in the array :%s"%len(self.block_array)
         ##self.block_array = self.block_array.reshape((x,y,z))
-        self.block_array = self.block_array.copy() ## I have no idea why, but
-                                                   ## the array has to be copied over itself
-                                                   ## to be able to write to it later
+##        self.block_array = self.block_array.copy() ## I have no idea why, but
+##                                                   ## the array has to be copied over itself
+##                                                   ## to be able to write to it later
+##        this is numpy code
         self.level_data = None
         self.level_x = z
         self.level_y = y
@@ -932,7 +957,8 @@ class MinecraftBotProtocol(Protocol):
         type = 0x0d
         pad   = 0 ## there's an unused pad byte for this packet
         while not len(msg) == 0:
-            chunk  = msg[0:64].ljust(64)
+            max_msg_len = 64 - 12 - 2 ## Magic number :/
+            chunk  = msg[0:max_msg_len].ljust(max_msg_len)
             msg    = msg[len(chunk):]
             packet = struct.pack('!BB64s',type,pad,chunk)
             self.transport.write(packet)
