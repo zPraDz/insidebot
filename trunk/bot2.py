@@ -958,7 +958,7 @@ class MinecraftBotProtocol(Protocol):
         pad   = 0 ## there's an unused pad byte for this packet
         while not len(msg) == 0:
             max_msg_len = 64 - 12 - 2 ## Magic number :/
-            chunk  = msg[0:max_msg_len].ljust(max_msg_len)
+            chunk  = msg[0:max_msg_len].ljust(64)
             msg    = msg[len(chunk):]
             packet = struct.pack('!BB64s',type,pad,chunk)
             self.transport.write(packet)
