@@ -216,6 +216,11 @@ class DrawBot:
 
         words = [ x.strip() for x in line.split(":") ]
         user  = words[0]
+
+        ## This strips anything like a title from a person's name
+        ## ie: (Builder) Inside, <Builder> Inside, [Dev] InsideInside
+        user = re.sub("[<([].*?[])>][ ]*",'',user)
+
         msg   = words[1]
 
         print "User: [%s:%s], message: [%s]"%(user,pid,msg)
