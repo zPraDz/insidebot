@@ -78,6 +78,9 @@ class Player:
         self.heading = heading
         self.pitch   = pitch
 
+    def __str__(self):
+        return "[%s:%s] @ (%s,%s,%s)"%(self.name,self.pid,self.x,self.y,self.z)
+
 class Action:
     def __init__(self,bot):
         self.bot = bot
@@ -180,7 +183,6 @@ class DrawBot:
 
     def onReset(self,silent=False):
         self.user       = None
-        self.user_pid   = None
         self.first_pos  = None
         self.second_pos = None
         self.block_type = None
@@ -216,7 +218,7 @@ class DrawBot:
         user  = words[0]
         msg   = words[1]
 
-        print "User: [%s], message: [%s]"%(user,msg)
+        print "User: [%s:%s], message: [%s]"%(user,pid,msg)
 #####
 ##### ToDo: Cleanup this section!
 #####
@@ -235,7 +237,7 @@ class DrawBot:
             elif msg == self.CMD_PREFIX + "goaway":
                 self.onGoAway()
             elif msg == self.CMD_PREFIX + "sponge":
-                self.onSponge(user,pid)
+                self.onSponge(user)
             elif msg.replace(self.CMD_PREFIX,'') in self.cmd_help:
                 self.onHelp(msg.replace(self.CMD_PREFIX,''))
         else:
@@ -245,29 +247,30 @@ class DrawBot:
             arg    = " ".join(words[1:])
             print "Command: [%s], Argument: [%s]"%(cmd,arg)
             if cmd == self.CMD_PREFIX + "drawline":
-                self.onDrawLine(pid,user,arg)
+                self.onDrawLine(user,arg)
             elif cmd == self.CMD_PREFIX + "cuboid":
-                self.onDrawCuboid(pid,user,arg)
+                self.onDrawCuboid(user,arg)
             elif cmd == self.CMD_PREFIX + "help":
                 self.onHelp(arg)
             elif cmd == self.CMD_PREFIX + "copy":
-                self.onCopy(pid,user,arg)
+                self.onCopy(user,arg)
             elif cmd == self.CMD_PREFIX + "paste":
-                self.onPaste(pid,user,arg)
+                self.onPaste(user,arg)
             elif cmd == self.CMD_PREFIX + "backup":
-                self.onBackup(pid,user,arg)
+                self.onBackup(user,arg)
             elif cmd == self.CMD_PREFIX + "restore":
-                self.onRestore(pid,user,arg)
+                self.onRestore(user,arg)
             elif cmd == self.CMD_PREFIX + "erase":
-                self.onErase(pid,user,arg)
+                self.onErase(user,arg)
             elif cmd == self.CMD_PREFIX + "replace":
-                self.onReplace(pid,user,arg)
+                self.onReplace(user,arg)
             elif cmd == self.CMD_PREFIX + "say":
-                self.onSay(pid,user,arg)
+                self.onSay(user,arg)
 
-    def onSay(self,pid,user,arg):
+    def onSay(self,user,arg):
         self.bot.sendMessage(arg)
-    def onBackup(self,pid,user,filename):
+
+    def onBackup(self,user,filename):
         try:
             f = open(filename+".backup","r")
             self.bot.sendMessage("A backup by that name already exists.")
@@ -278,7 +281,7 @@ class DrawBot:
             self.bot.block_array.tofile(f)
             self.bot.sendMessage("Backup saved to file %s.backup"%filename)
 
-    def onRestore(self,pid,user,filename):
+    def onRestore(self,user,filename):
         try:
             f = open(filename+".backup")
             backup_header = f.read(12)
@@ -287,7 +290,6 @@ class DrawBot:
                 self.bot.sendMessage("That backup is not for this map.")
                 return
             self.user             = user
-            self.user_pid         = pid
             self.mode             = "restore"
             self.restore_filename = filename
             self.bot.sendMessage("Place 2 brown shrooms to restore an area.")
@@ -349,7 +351,7 @@ class DrawBot:
         except IOError:
             self.bot.sendMessage("Error while restoring.")
 
-    def onCopy(self,pid,user,filename):
+    def onCopy(self,user,filename):
         if self.user:
             self.bot.sendMessage("%s is using the bot. Use .reset to reset"%self.user)
             return
@@ -360,17 +362,15 @@ class DrawBot:
         except IOError:
             self.filename = filename
             self.user     = user
-            self.user_pid = pid
             self.mode     = "copy"
             self.bot.sendMessage("Place 2 shrooms to copy the cuboid")
 
-    def onSponge(self,user,pid):
+    def onSponge(self,user):
         if self.user:
             self.bot.sendMessage("%s is using the bot. Use .reset to reset."%self.user)
             return
 
         self.user     = user
-        self.user_pid = pid
         self.mode     = "sponge"
         self.bot.sendMessage("Define volume to deflood w/ 2 brown shrooms")
 
@@ -426,7 +426,7 @@ class DrawBot:
         finally:
             self.onReset(silent=True)
 
-    def onPaste(self,pid,user,arg):
+    def onPaste(self,user,arg):
         if self.user:
             self.bot.sendMessage("%s is using the bot. Use .reset to reset."%self.user)
             return
@@ -436,7 +436,6 @@ class DrawBot:
             f.close()
             self.bot.sendMessage("Place one brown mushroom to start pasting.")
             self.user     = user
-            self.user_pid = pid
             self.filename = arg
             self.mode     = "paste"
         except IOError:
@@ -511,7 +510,7 @@ class DrawBot:
         except:
             raise DrawBot.BlockTypeError(arg)
 
-    def onDrawLine(self,pid,user,arg):
+    def onDrawLine(self,user,arg):
 
         try:
             block_type = self.getBlockType(arg)
@@ -526,10 +525,9 @@ class DrawBot:
         self.bot.sendMessage("%s, place 2 brown shrooms to define a line."%user)
         self.block_type = block_type
         self.user     = user
-        self.user_pid = pid
         self.mode = "line"
 
-    def onErase(self,pid,user,arg):
+    def onErase(self,user,arg):
         try:
             block_type = self.getBlockType(arg)
         except DrawBot.BlockTypeError as e:
@@ -543,13 +541,12 @@ class DrawBot:
         self.bot.sendMessage("%s, place 2 brown sponges to define a cuboid"%user)
         self.block_type = block_type
         self.user = user
-        self.user_pid = pid
         self.mode = "erase"
 
-    def onReplace(self,pid,user,arg):
+    def onReplace(self,user,arg):
         pass
 
-    def onDrawCuboid(self,pid,user,arg):
+    def onDrawCuboid(self,user,arg):
         try:
             block_type = self.getBlockType(arg)
         except DrawBot.BlockTypeError as e:
@@ -563,15 +560,17 @@ class DrawBot:
         self.bot.sendMessage("%s, place 2 brown mushroom to define a cuboid."%user)
         self.block_type = block_type
         self.user = user
-        self.user_pid = pid
         self.mode = "cuboid"
 
     def onSetBlock(self,type,x,y,z):
         if (not type == 39) or (not self.user):
             return
 
-        if (self.user_pid in self.bot.players):
-            player = self.bot.players[self.user_pid]
+        print self.bot.players
+
+        pid = self.bot.hasPlayer(self.user)
+        if not pid == MinecraftBot.INVALID_PLAYER:
+            player = self.bot.players[pid]
             if self.bot.dist3d(player.x,player.y,player.z,x,y,z) < 10:
                 if not self.first_pos:
                     self.first_pos = (x,y,z)
@@ -740,6 +739,7 @@ class DrawBot:
 ##        print "Offset 256*512*128: [%s]"%b[256*512*128-1]
 
 class MinecraftBot:
+    INVALID_PLAYER = -1
     def __init__(self):
         self.level_data   = ""
         self.players      = {}
@@ -755,6 +755,12 @@ class MinecraftBot:
         self.level_z      = None
 
         ## originally 17 -------------------------------^
+
+    def hasPlayer(self,name):
+        for k,v in self.players.iteritems():
+            if v.name == name:
+                return k
+        return MinecraftBot.INVALID_PLAYER
 
     def onServerJoin(self, version, srv_name, motd, user_type):
         print "Joined server! Ver: %s, Name: %s, Motd: %s, Your type: %s"%(version,srv_name,motd,user_type)
@@ -808,19 +814,29 @@ class MinecraftBot:
         return y*(self.level_x * self.level_z) + z*self.level_z + x
 
     def onSetBlock(self,type,x,y,z):
-##        if type == 23423423234:
-##            print ("Block deleted at (%s,%s,%s) Nearby: "%(x,y,z)),
-##            for p in self.players.values():
-##                d = self.dist3d(p.x,p.y,p.z,x,y,z)
-##                if self.dist3d(p.x,p.y,p.z,x,y,z) < 15:
-##                    print("%s [%s]"%(p.name,int(d))),
-##            print("")
-##        elif type == 45:
-##            print("Block [%s] placed at (%s,%s,%s)"%(type,x,y,z))
+        if type == 23423423234:
+            print ("Block deleted at (%s,%s,%s) Nearby: "%(x,y,z)),
+            for p in self.players.values():
+                d = self.dist3d(p.x,p.y,p.z,x,y,z)
+                if self.dist3d(p.x,p.y,p.z,x,y,z) < 15:
+                    print("%s [%s]"%(p.name,int(d))),
+            print("")
+        elif type == 45:
+            print("Block [%s] placed at (%s,%s,%s)"%(type,x,y,z))
+        elif type == 39:
+            print "Mushroom placed at (%s,%s,%s) Nearby:"%(x,y,z)
+            for p in self.players.values():
+                d = self.dist3d(p.x,p.y,p.z,x,y,z)
+                if self.dist3d(p.x,p.y,p.z,x,y,z) < 15:
+                    print("%s [%s]"%(p.name,int(d))),
+            print("")
+
+
         self.bot.onSetBlock(type,x,y,z)
         self.block_array[ self.calculateOffset(x,y,z)] = type
 
     def onSpawnPlayer(self,pid,name,x,y,z,heading,pitch):
+        name = re.sub('&.','',name) ## strip color codes, if any
         p = Player(name,pid)
         p.pos(x,y,z)
         p.orient(heading,pitch)
@@ -862,10 +878,9 @@ class MinecraftBot:
         else:
             print "Removed unknown player with pid %s"%pid
 
-    def onMessage(self,pid,message): ## For some reason the bot's PID changes
-        print "<%s>"%(message)       ## all the time and I'm not sure how to get it
-                                     ## at the moment.
+    def onMessage(self,pid,message):
         message = re.sub('&.','',message) ## strip color codes, if any
+        print "<%s>"%(message)
         self.bot.onMessage(pid,message)
 
     def onKick(self,message):
