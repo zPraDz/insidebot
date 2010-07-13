@@ -666,7 +666,7 @@ class DrawBot:
 
             offset = self.bot.calculateOffset(*block[1:])
             current_tile = int(self.bot.block_array[offset])
-            ##print "Current: %s, To build: %s, Same?: %s at %s"%(current_tile,block[0],current_tile==block[0],block[1:])
+
             ## No point in overwriting something if it's already there.
             if (current_tile == block[0]):
                 continue
@@ -741,6 +741,9 @@ class DrawBot:
 class MinecraftBot:
     INVALID_PLAYER = -1
     def __init__(self):
+        self.reset()
+
+    def reset(self):
         self.level_data   = ""
         self.players      = {}
         self.info         = None
@@ -754,8 +757,6 @@ class MinecraftBot:
         self.level_y      = None
         self.level_z      = None
 
-        ## originally 17 -------------------------------^
-
     def hasPlayer(self,name):
         for k,v in self.players.iteritems():
             if v.name == name:
@@ -763,6 +764,7 @@ class MinecraftBot:
         return MinecraftBot.INVALID_PLAYER
 
     def onServerJoin(self, version, srv_name, motd, user_type):
+        self.reset()
         print "Joined server! Ver: %s, Name: %s, Motd: %s, Your type: %s"%(version,srv_name,motd,user_type)
 
     def onPing(self): ## atm does nothing?
@@ -800,7 +802,7 @@ class MinecraftBot:
 ##                                                   ## the array has to be copied over itself
 ##                                                   ## to be able to write to it later
 ##        this is numpy code
-        self.level_data = None
+        self.level_data = ""
         self.level_x = z
         self.level_y = y
         self.level_z = x
@@ -860,8 +862,9 @@ class MinecraftBot:
         ##print "PlayerUpdate2(): Is this even ever used?"
 
     def onPositionUpdate(self,pid,delta_x,delta_y,delta_z):
-        p = self.players[pid]
-        p.delta_pos(delta_x,delta_y,delta_z)
+        if pid in self.players:
+            p = self.players[pid]
+            p.delta_pos(delta_x,delta_y,delta_z)
         ##print "%s + (%s,%s,%s)"%(p.name,delta_x,delta_y,delta_z)
 
     def onOrientationUpdate(self,pid,heading,pitch):
