@@ -8,7 +8,25 @@ from sys import stdout
 import struct, socket, time, math, array, re
 ## other libraries
 import mechanize
-##import numpy
+
+###########################################################
+##             USER-CONFIGURATION SECTION                ##
+###########################################################
+
+BUILD_SPEED = .1  ## This is the time between actions.
+                  ## increase this number to make the bot go slower, decrease it
+                  ## to make it go faster.
+
+CMD_PREFIX  = "+" ## Change this to change what triggers the bot responds to
+                  ## A one letter thing works best.
+
+###########################################################
+##        USER-CONFIGURATION SECTION ENDS HERE           ##
+##   If you don't know what you're doing, don't change   ##
+##   anything below this line. If you do, you are 100%   ##
+##     on your own (unless it's a genuine programming    ##
+##                      question).                       ##
+###########################################################
 
 stored = False
 
@@ -162,7 +180,6 @@ class DrawBot:
                               "obsidian":49,"blank":0
                         }
 
-        self.CMD_PREFIX = "."
                         ######         012345678901234567890123456789012345678901234567890/50
         self.cmd_help   = {"cuboid"    :"cuboid <type> - draws a 3D shape of blocks <type>",
                            "drawline"  :"drawline <type> - draws a line between 2pts",
@@ -224,52 +241,56 @@ class DrawBot:
         msg   = words[1]
 
         print "User: [%s:%s], message: [%s]"%(user,pid,msg)
+
+        if (255 in self.bot.players) and (user == self.bot.players[255].name):
+            print "[Ignoring a message produced by the bot]"
+            return
 #####
 ##### ToDo: Cleanup this section!
 #####
-        if (msg.split(" ")[0].replace(self.CMD_PREFIX, '') in self.cmd_help) and not self.canUseBot(user):
+        if (msg.split(" ")[0].replace(CMD_PREFIX, '') in self.cmd_help) and not self.canUseBot(user):
             self.bot.sendMessage("I'm sorry, but you can't use this bot.")
             return
 
         if not " " in msg:
             ## Check for no argument commands
-            if msg == self.CMD_PREFIX + "reset":
+            if msg == CMD_PREFIX + "reset":
                 self.onReset()
-            elif msg == self.CMD_PREFIX + "abort":
+            elif msg == CMD_PREFIX + "abort":
                 self.onAbort()
-            elif msg == self.CMD_PREFIX + "help":
+            elif msg == CMD_PREFIX + "help":
                 self.onHelp()
-            elif msg == self.CMD_PREFIX + "goaway":
+            elif msg == CMD_PREFIX + "goaway":
                 self.onGoAway()
-            elif msg == self.CMD_PREFIX + "sponge":
+            elif msg == CMD_PREFIX + "sponge":
                 self.onSponge(user)
-            elif msg.replace(self.CMD_PREFIX,'') in self.cmd_help:
-                self.onHelp(msg.replace(self.CMD_PREFIX,''))
+            elif msg.replace(CMD_PREFIX,'') in self.cmd_help:
+                self.onHelp(msg.replace(CMD_PREFIX,''))
         else:
             ## Check for commands that take an argument
             words  = [ x.strip() for x in msg.split(" ") ]
             cmd    = words[0]
             arg    = " ".join(words[1:])
             print "Command: [%s], Argument: [%s]"%(cmd,arg)
-            if cmd == self.CMD_PREFIX + "drawline":
+            if cmd == CMD_PREFIX + "drawline":
                 self.onDrawLine(user,arg)
-            elif cmd == self.CMD_PREFIX + "cuboid":
+            elif cmd == CMD_PREFIX + "cuboid":
                 self.onDrawCuboid(user,arg)
-            elif cmd == self.CMD_PREFIX + "help":
+            elif cmd == CMD_PREFIX + "help":
                 self.onHelp(arg)
-            elif cmd == self.CMD_PREFIX + "copy":
+            elif cmd == CMD_PREFIX + "copy":
                 self.onCopy(user,arg)
-            elif cmd == self.CMD_PREFIX + "paste":
+            elif cmd == CMD_PREFIX + "paste":
                 self.onPaste(user,arg)
-            elif cmd == self.CMD_PREFIX + "backup":
+            elif cmd == CMD_PREFIX + "backup":
                 self.onBackup(user,arg)
-            elif cmd == self.CMD_PREFIX + "restore":
+            elif cmd == CMD_PREFIX + "restore":
                 self.onRestore(user,arg)
-            elif cmd == self.CMD_PREFIX + "erase":
+            elif cmd == CMD_PREFIX + "erase":
                 self.onErase(user,arg)
-            elif cmd == self.CMD_PREFIX + "replace":
+            elif cmd == CMD_PREFIX + "replace":
                 self.onReplace(user,arg)
-            elif cmd == self.CMD_PREFIX + "say":
+            elif cmd == CMD_PREFIX + "say":
                 self.onSay(user,arg)
 
     def onSay(self,user,arg):
@@ -340,7 +361,6 @@ class DrawBot:
                             elif (backup_tile == 0) and not (current_tile == 0):
                                 tiles_to_build.append((0,x1,y,z))
 
-                            ##print "(%s,%s,%s) - old: [%s], now [%s]"%(x1,y,z,backup_tile,current_tile)
                         z+=1
                     y += 1
                 x1 +=1
@@ -358,7 +378,7 @@ class DrawBot:
 
     def onCopy(self,user,filename):
         if self.user:
-            self.bot.sendMessage("%s is using the bot. Use .reset to reset"%self.user)
+            self.bot.sendMessage("%s is using the bot. Use %sreset to reset"%(self.user,CMD_PREFIX))
             return
         try:
             f = open(filename+".chunk")
@@ -372,7 +392,7 @@ class DrawBot:
 
     def onSponge(self,user):
         if self.user:
-            self.bot.sendMessage("%s is using the bot. Use .reset to reset."%self.user)
+            self.bot.sendMessage("%s is using the bot. Use %sreset to reset."%(self.user,CMD_PREFIX))
             return
 
         self.user     = user
@@ -433,7 +453,7 @@ class DrawBot:
 
     def onPaste(self,user,arg):
         if self.user:
-            self.bot.sendMessage("%s is using the bot. Use .reset to reset."%self.user)
+            self.bot.sendMessage("%s is using the bot. Use %sreset to reset."%(self.user,CMD_PREFIX))
             return
 
         try:
@@ -524,7 +544,7 @@ class DrawBot:
             return
 
         if self.user:
-            self.bot.sendMessage("%s is using the bot. Use .reset to reset."%self.user)
+            self.bot.sendMessage("%s is using the bot. Use %sreset to reset."%(self.user,CMD_PREFIX))
             return
 
         self.bot.sendMessage("%s, place 2 brown shrooms to define a line."%user)
@@ -540,10 +560,10 @@ class DrawBot:
             return
 
         if self.user:
-            self.bot.sendMessage("%s is using the bot. Use .reset to reset"%self.user)
+            self.bot.sendMessage("%s is using the bot. Use %sreset to reset"%(self.user,CMD_PREFIX))
             return
 
-        self.bot.sendMessage("%s, place 2 brown sponges to define a cuboid"%user)
+        self.bot.sendMessage("%s, place 2 brown mushrooms to define a cuboid"%user)
         self.block_type = block_type
         self.user = user
         self.mode = "erase"
@@ -559,7 +579,7 @@ class DrawBot:
             return
 
         if self.user:
-            self.bot.sendMessage("%s is using the bot. Use .reset to reset."%self.user)
+            self.bot.sendMessage("%s is using the bot. Use %sreset to reset."%(self.user,CMD_PREFIX))
             return
 
         self.bot.sendMessage("%s, place 2 brown mushroom to define a cuboid."%user)
@@ -762,6 +782,9 @@ class MinecraftBot:
         self.level_y      = None
         self.level_z      = None
 
+        self.building_queue = [] ## This is used for storing setblocks() which are sent
+                                 ## while the map is not fully loaded (ie: on multi-world servers)
+
     def hasPlayer(self,name):
         for k,v in self.players.iteritems():
             if v.name == name:
@@ -802,16 +825,14 @@ class MinecraftBot:
         self.block_array.fromstring(data)
         print "Number of blocks received in file: %s"%num_blocks
         print "Number of elements in the array :%s"%len(self.block_array)
-        ##self.block_array = self.block_array.reshape((x,y,z))
-##        self.block_array = self.block_array.copy() ## I have no idea why, but
-##                                                   ## the array has to be copied over itself
-##                                                   ## to be able to write to it later
-##        this is numpy code
         self.level_data = ""
         self.level_x = z
         self.level_y = y
         self.level_z = x
         print "Level data written to file!"
+
+        for b in self.building_queue:
+            self.onSetBlock( *b )
 
 
     def dist3d(self,x1,y1,z1,x2,y2,z2):
@@ -821,26 +842,35 @@ class MinecraftBot:
         return y*(self.level_x * self.level_z) + z*self.level_z + x
 
     def onSetBlock(self,type,x,y,z):
-        if type == 23423423234:
-            print ("Block deleted at (%s,%s,%s) Nearby: "%(x,y,z)),
-            for p in self.players.values():
-                d = self.dist3d(p.x,p.y,p.z,x,y,z)
-                if self.dist3d(p.x,p.y,p.z,x,y,z) < 15:
-                    print("%s [%s]"%(p.name,int(d))),
-            print("")
-        elif type == 45:
-            print("Block [%s] placed at (%s,%s,%s)"%(type,x,y,z))
-        elif type == 39:
-            print "Mushroom placed at (%s,%s,%s) Nearby:"%(x,y,z)
-            for p in self.players.values():
-                d = self.dist3d(p.x,p.y,p.z,x,y,z)
-                if self.dist3d(p.x,p.y,p.z,x,y,z) < 15:
-                    print("%s [%s]"%(p.name,int(d))),
-            print("")
+##        if type == 23423423234:
+##            print ("Block deleted at (%s,%s,%s) Nearby: "%(x,y,z)),
+##            for p in self.players.values():
+##                d = self.dist3d(p.x,p.y,p.z,x,y,z)
+##                if self.dist3d(p.x,p.y,p.z,x,y,z) < 15:
+##                    print("%s [%s]"%(p.name,int(d))),
+##            print("")
+##        elif type == 45:
+##            print("Block [%s] placed at (%s,%s,%s)"%(type,x,y,z))
+##        elif type == 39:
+##            print "Mushroom placed at (%s,%s,%s) Nearby:"%(x,y,z)
+##            for p in self.players.values():
+##                d = self.dist3d(p.x,p.y,p.z,x,y,z)
+##                if self.dist3d(p.x,p.y,p.z,x,y,z) < 15:
+##                    print("%s [%s]"%(p.name,int(d))),
+##            print("")
 
+        if not self.block_array:
+            self.building_queue.append( (type,x,y,z) )
 
         self.bot.onSetBlock(type,x,y,z)
-        self.block_array[ self.calculateOffset(x,y,z)] = type
+        offset = self.calculateOffset(x,y,z)
+
+        ## I'm assuming that the server is just sending new block data ahead of time
+        ## and will actually send more blocks in the future.
+        if offset > len(self.block_array) - 1:
+            self.building_queue.append( (type,x,y,z))
+        else:
+            self.block_array[ offset ] = type
 
     def onSpawnPlayer(self,pid,name,x,y,z,heading,pitch):
         name = re.sub('&.','',name) ## strip color codes, if any
@@ -907,7 +937,7 @@ class MinecraftBot:
 
         ## This sends out one action every 1/10th of a second
         action = task.LoopingCall(self.do_action)
-        action.start(.1)
+        action.start(BUILD_SPEED)
 
     def update_server(self):
         ## start_bot() is called right when the level is done loading
