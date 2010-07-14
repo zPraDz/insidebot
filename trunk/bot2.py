@@ -20,6 +20,9 @@ BUILD_SPEED = .1  ## This is the time between actions.
 CMD_PREFIX  = "+" ## Change this to change what triggers the bot responds to
                   ## A one letter thing works best.
 
+SILENT_MODE = False ## If True, the bot will only send error messages
+                    ## ie: failed copy/paste/backup/restore
+
 ###########################################################
 ##        USER-CONFIGURATION SECTION ENDS HERE           ##
 ##   If you don't know what you're doing, don't change   ##
@@ -96,7 +99,7 @@ class Player:
         self.heading = heading
         self.pitch   = pitch
 
-    def __str__(self):
+    def __repr__(self):
         return "[%s:%s] @ (%s,%s,%s)"%(self.name,self.pid,self.x,self.y,self.z)
 
 class Action:
@@ -236,7 +239,7 @@ class DrawBot:
 
         ## This strips anything like a title from a person's name
         ## ie: (Builder) Inside, <Builder> Inside, [Dev] InsideInside
-        user = re.sub("[<([].*?[])>][ ]*",'',user)
+        user = re.sub("[<([].*?[])>]*[ ]*",'',user)
 
         msg   = words[1]
 
@@ -249,7 +252,7 @@ class DrawBot:
 ##### ToDo: Cleanup this section!
 #####
         if (msg.split(" ")[0].replace(CMD_PREFIX, '') in self.cmd_help) and not self.canUseBot(user):
-            self.bot.sendMessage("I'm sorry, but you can't use this bot.")
+            self.bot.sendMessage("I'm sorry, but you can't use this bot.",ignorable=True)
             return
 
         if not " " in msg:
@@ -318,7 +321,7 @@ class DrawBot:
             self.user             = user
             self.mode             = "restore"
             self.restore_filename = filename
-            self.bot.sendMessage("Place 2 brown shrooms to restore an area.")
+            self.bot.sendMessage("Place 2 brown shrooms to restore an area.",ignorable=True)
         except IOError:
             self.bot.sendMessage("No such backup exists.")
 
@@ -326,7 +329,6 @@ class DrawBot:
         try:
             f = open(self.restore_filename+".backup","rb")
             header_x, header_y, header_z = struct.unpack('!3i',f.read(12))
-            ##backup_array = numpy.fromfile(f,dtype="uint8")
             backup_array = array.array('B')
             backup_array.fromfile(f,header_x*header_y*header_z)
             x1,y1,z1 = self.first_pos
@@ -369,12 +371,12 @@ class DrawBot:
             self.DrawBlocks()
             self.blocks += tiles_to_deglass
             self.DrawBlocks()
-            self.bot.sendMessage("Done restoring.")
+            self.bot.sendMessage("Done restoring.",ignorable=True)
             ##self.bot.action_queue.append(SayAction(self.bot,"Done restoring."))
             self.onReset(silent=True)
 
         except IOError:
-            self.bot.sendMessage("Error while restoring.")
+            self.bot.sendMessage("Error while restoring (couldn't read file).")
 
     def onCopy(self,user,filename):
         if self.user:
@@ -388,7 +390,7 @@ class DrawBot:
             self.filename = filename
             self.user     = user
             self.mode     = "copy"
-            self.bot.sendMessage("Place 2 shrooms to copy the cuboid")
+            self.bot.sendMessage("Place 2 shrooms to copy the cuboid",ignorable=True)
 
     def onSponge(self,user):
         if self.user:
@@ -397,7 +399,7 @@ class DrawBot:
 
         self.user     = user
         self.mode     = "sponge"
-        self.bot.sendMessage("Define volume to deflood w/ 2 brown shrooms")
+        self.bot.sendMessage("Define volume to deflood w/ 2 brown shrooms",ignorable=True)
 
     def Sponge(self):
         x1,y1,z1 = self.first_pos
@@ -420,7 +422,6 @@ class DrawBot:
     def Copy(self,postfix=".chunk"):
         try:
             with open(self.filename + postfix,"wb") as f:
-                ##print "P1: %s P2: %s"%(self.first_pos,self.second_pos)
                 x1,y1,z1 = self.first_pos
                 x2,y2,z2 = self.second_pos
                 if x1 > x2:
@@ -438,7 +439,6 @@ class DrawBot:
                         z = z1
                         while z <= z2:
                             offset = self.bot.calculateOffset(x1,y,z)
-                            ##print "Copying tile %s from (%s,%s,%s)"%(self.bot.block_array[offset],x1,y,z)
                             f.write( struct.pack('!B',int(self.bot.block_array[offset])))
                             z +=1
                         y +=1
@@ -459,7 +459,7 @@ class DrawBot:
         try:
             f = open(arg + ".chunk","rb") ## just testing if the file exists
             f.close()
-            self.bot.sendMessage("Place one brown mushroom to start pasting.")
+            self.bot.sendMessage("Place one brown mushroom to start pasting.",ignorable=True)
             self.user     = user
             self.filename = arg
             self.mode     = "paste"
@@ -474,7 +474,6 @@ class DrawBot:
                 w,d,h    = struct.unpack('!3i',f.read(12))
                 x1,y1,z1 = self.first_pos
                 x2,y2,z2 = x1+w, y1+d, z1+h
-                ##print "Printing at (%s,%s,%s) size: (%s,%s,%s)"%(x1,y1,z1,w,d,h)
 
                 while x1 < x2:
                     y = y1
@@ -482,8 +481,6 @@ class DrawBot:
                         z = z1
                         while z < z2:
                             block_type = struct.unpack('!B', f.read(1))[0]
-
-                            ##print "Pasting type %s at (%s,%s,%s)"%(block_type,x1,y,z)
                             if block_type in self.valid_blocks:
                                 self.blocks.append( (block_type,x1,y,z) )
                             elif block_type == 2:
@@ -492,7 +489,7 @@ class DrawBot:
                         y+=1
                     x1 += 1
             self.DrawBlocks()
-            self.bot.sendMessage("Pasting file!")
+            self.bot.sendMessage("Pasting file!",ignorable=True)
         except IOError:
             self.bot.sendMessage("Couldn't read from file")
         finally:
@@ -524,7 +521,6 @@ class DrawBot:
             return "%s is not a valid block type."%self.block_type
 
     def getBlockType(self,arg):
-        ##print "ARG :[%s]"%arg
         try:
             if arg.lower() in self.block_names: ## check string first, then try
                 return self.block_names[arg]    ## conversion which may throw
@@ -547,7 +543,7 @@ class DrawBot:
             self.bot.sendMessage("%s is using the bot. Use %sreset to reset."%(self.user,CMD_PREFIX))
             return
 
-        self.bot.sendMessage("%s, place 2 brown shrooms to define a line."%user)
+        self.bot.sendMessage("%s, place 2 brown shrooms to define a line."%user,ignorable=True)
         self.block_type = block_type
         self.user     = user
         self.mode = "line"
@@ -563,7 +559,7 @@ class DrawBot:
             self.bot.sendMessage("%s is using the bot. Use %sreset to reset"%(self.user,CMD_PREFIX))
             return
 
-        self.bot.sendMessage("%s, place 2 brown mushrooms to define a cuboid"%user)
+        self.bot.sendMessage("%s, place 2 brown mushrooms to define a cuboid"%user,ignorable=True)
         self.block_type = block_type
         self.user = user
         self.mode = "erase"
@@ -582,7 +578,7 @@ class DrawBot:
             self.bot.sendMessage("%s is using the bot. Use %sreset to reset."%(self.user,CMD_PREFIX))
             return
 
-        self.bot.sendMessage("%s, place 2 brown mushroom to define a cuboid."%user)
+        self.bot.sendMessage("%s, place 2 brown mushroom to define a cuboid."%user,ignorable=True)
         self.block_type = block_type
         self.user = user
         self.mode = "cuboid"
@@ -602,8 +598,6 @@ class DrawBot:
 
                     if self.mode == "paste":
                         self.Paste()
-                    ##else:
-                    ##    self.bot.sendMessage("1st block set. Place 2nd brown mushroom.")
                 else:
                     self.second_pos = (x,y,z)
 
@@ -624,7 +618,7 @@ class DrawBot:
             self.onReset(silent=True)
 
     def Erase(self):
-        self.bot.sendMessage("Erasing blocks of that type from the area")
+        self.bot.sendMessage("Erasing blocks of that type from the area",ignorable=True)
         x1,y1,z1 = self.first_pos
         x2,y2,z2 = self.second_pos
         if x1 > x2: x1,x2 = x2,x1
@@ -646,7 +640,7 @@ class DrawBot:
         self.DrawBlocks()
 
     def DrawCuboid(self):
-        self.bot.sendMessage("Drawing cuboid.")
+        self.bot.sendMessage("Drawing cuboid.",ignorable=True)
         x1,y1,z1 = self.first_pos
         x2,y2,z2 = self.second_pos
 
@@ -729,7 +723,7 @@ class DrawBot:
         self.bot.action_queue.append(ma)
 
     def DrawLine(self):
-        self.bot.sendMessage("Drawing line.")
+        self.bot.sendMessage("Drawing line.",ignorable=True)
         fp = self.first_pos
         sp = self.second_pos
         ## This is the vector from pt 1 to pt 2
@@ -755,13 +749,6 @@ class DrawBot:
 
     def onStart(self):
         pass
-        ##b = self.bot.block_array
-##        print "Offset 0    : [%s]"%b[0]
-##        print "Offset 256*512*128-511: [%s]"%b[256*512*128-511-1]
-##        print "Offset 256*512*128-256: [%s]"%b[256*512*128-256-1]
-##        print "Offset 256*512*128-128: [%s]"%b[256*512*128-128-1]
-##        print "Offset 256*512*128-1: [%s]"%b[256*512*128-1-1]
-##        print "Offset 256*512*128: [%s]"%b[256*512*128-1]
 
 class MinecraftBot:
     INVALID_PLAYER = -1
@@ -782,8 +769,10 @@ class MinecraftBot:
         self.level_y      = None
         self.level_z      = None
 
+        self.loading_map    = True
         self.building_queue = [] ## This is used for storing setblocks() which are sent
                                  ## while the map is not fully loaded (ie: on multi-world servers)
+
 
     def hasPlayer(self,name):
         for k,v in self.players.iteritems():
@@ -800,6 +789,7 @@ class MinecraftBot:
 
     def onLevelStart(self): ## no actual data sent along with this
         print "Receiving level data"
+        self.loading_map = True
 
     def onLevelData(self,length,data,percent_complete): ##
         self.level_data += data
@@ -808,16 +798,34 @@ class MinecraftBot:
     def onLevelEnd(self,x,y,z): ## size of the level (x,y,z)
         print "Level downloaded. Size: (%s,%s,%s)"%(x,y,z)
         f_name = "out.gz"
+
+        ## Striping tailing zeroes from the level data as the data transmitted
+        ## has a length equal to a multiple of 1024 bytes, padded with trailing
+        ## zeroes.
+        self.level_data = self.level_data.strip('\x00')
+
+        ## Below is a hack to get around the fact that Python 2.6 can't handle
+        ## gzipped files that have been zero padded. More here:
+        ## http://bugs.python.org/issue2846
+        fail_counter = 0
+        data = ""
+        while fail_counter < 4:
+            try:
+                sio  = StringIO(self.level_data)
+                gzf  = GzipFile(fileobj = sio, mode="rb+")
+                num_blocks = struct.unpack('!l',gzf.read(4))
+                data = gzf.read()
+                break
+            except:
+                print "Failed to read gzip file.. [Attempt %s]"%fail_counter
+                fail_counter += 1
+                self.level_data += "\x00"
+
         print "Writing %s bytes to %s"%(len(self.level_data),f_name)
-        with open(f_name, "w") as f:
+        with open(f_name, "wb") as f:
             f.write(self.level_data)
 
-        sio  = StringIO(self.level_data)
-        gzf  = GzipFile(fileobj = sio, mode="rb+")
-        num_blocks = struct.unpack('!l',gzf.read(4))
-        data = gzf.read()
-
-        with open("level.data","w") as f:
+        with open("level.data","wb") as f:
             f.write(data)
 
         ##self.block_array = numpy.frombuffer(data, dtype="uint8")
@@ -829,6 +837,7 @@ class MinecraftBot:
         self.level_x = z
         self.level_y = y
         self.level_z = x
+        self.loading_map = False
         print "Level data written to file!"
 
         for b in self.building_queue:
@@ -842,24 +851,7 @@ class MinecraftBot:
         return y*(self.level_x * self.level_z) + z*self.level_z + x
 
     def onSetBlock(self,type,x,y,z):
-##        if type == 23423423234:
-##            print ("Block deleted at (%s,%s,%s) Nearby: "%(x,y,z)),
-##            for p in self.players.values():
-##                d = self.dist3d(p.x,p.y,p.z,x,y,z)
-##                if self.dist3d(p.x,p.y,p.z,x,y,z) < 15:
-##                    print("%s [%s]"%(p.name,int(d))),
-##            print("")
-##        elif type == 45:
-##            print("Block [%s] placed at (%s,%s,%s)"%(type,x,y,z))
-##        elif type == 39:
-##            print "Mushroom placed at (%s,%s,%s) Nearby:"%(x,y,z)
-##            for p in self.players.values():
-##                d = self.dist3d(p.x,p.y,p.z,x,y,z)
-##                if self.dist3d(p.x,p.y,p.z,x,y,z) < 15:
-##                    print("%s [%s]"%(p.name,int(d))),
-##            print("")
-
-        if not self.block_array:
+        if not self.block_array or self.loading_map:
             self.building_queue.append( (type,x,y,z) )
 
         self.bot.onSetBlock(type,x,y,z)
@@ -890,23 +882,19 @@ class MinecraftBot:
             p = self.players[pid]
             p.pos(x,y,z)
             p.orient(heading,pitch)
-        ##print "%s -> (%s,%s,%s)"%(p.name,x,y,z)
 
     def onPlayerUpdate2(self,pid,x,y,z,heading,pitch):
         pass ## As I'm not sure what to do with the data
-        ##print "PlayerUpdate2(): Is this even ever used?"
 
     def onPositionUpdate(self,pid,delta_x,delta_y,delta_z):
         if pid in self.players:
             p = self.players[pid]
             p.delta_pos(delta_x,delta_y,delta_z)
-        ##print "%s + (%s,%s,%s)"%(p.name,delta_x,delta_y,delta_z)
 
     def onOrientationUpdate(self,pid,heading,pitch):
         if pid in self.players:
             p = self.players[pid]
             p.orient(heading,pitch)
-            ##print "%s new orientation: (%s,%s)"%(p.name,heading,pitch)
 
     def onDespawnPlayer(self,pid):
         if pid in self.players:
@@ -966,8 +954,9 @@ class MinecraftBot:
         self.protocol.setBlock(0x01,type,x,y,z)
                          ##     ^- 0x01 is set block
 
-    def sendMessage(self,msg):
-        self.protocol.sendMessage(msg)
+    def sendMessage(self,msg,ignorable=False):
+        if SILENT_MODE and ignorable:
+            self.protocol.sendMessage(msg)
 
 class MinecraftBotProtocol(Protocol):
     def __init__(self,bot):
@@ -1073,7 +1062,11 @@ class MinecraftBotProtocol(Protocol):
         elif packet_type == '\x03':
             d = struct.unpack('!h1024sB',data)
             length       = d[0]
-            level_data   = d[1][:length]
+            level_data   = d[1]
+
+            print "Level chunk length: %s"%length
+            ##level_data   = d[1][:length]
+
             completeness = d[2]
             self.bot.onLevelData(length,level_data,completeness)
         elif packet_type == '\x04':
