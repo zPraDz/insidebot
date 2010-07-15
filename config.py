@@ -2,11 +2,11 @@
 ##             USER-CONFIGURATION SECTION                ##
 ###########################################################
 
-BUILD_SPEED = .15  ## This is the time between actions.
+BUILD_SPEED = .1  ## This is the time between actions.
                   ## increase this number to make the bot go slower, decrease it
                   ## to make it go faster.
 
-CMD_PREFIX  = "." ## Change this to change what triggers the bot responds to
+CMD_PREFIX  = "!" ## Change this to change what triggers the bot responds to
                   ## A one letter thing works best.
 
 SILENT_MODE = False ## If True, the bot will only send error messages
@@ -27,7 +27,7 @@ block_names  = {              "stone":1, "dirt":3, "cobblestone":4, "wood":5,
                               "black":34, "grey":35, "white":36, "yellow flower":37,
                               "rose":38, "redrose":38, "redflower":38,
                               "red mushroom":39, "brown mushroom":40, "gold block":41,
-                              "ironblock":42, "stair":44, "brick":45, "tnt":46,
+                              "iron block":42, "stair":44, "brick":45, "tnt":46,
                               "bookcase":47, "mossy cobblestone":48, "green cobblestone":48,
                               "obsidian":49,"blank":0
                 }
