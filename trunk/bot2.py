@@ -4,32 +4,12 @@ from twisted.internet import reactor, task
 ## built in
 from gzip import GzipFile
 from StringIO import StringIO
-from sys import stdout
-import struct, socket, time, math, array, re
+import struct, socket, time, math, array, re, sys, os
 ## other libraries
 import mechanize
-
-###########################################################
-##             USER-CONFIGURATION SECTION                ##
-###########################################################
-
-BUILD_SPEED = .1  ## This is the time between actions.
-                  ## increase this number to make the bot go slower, decrease it
-                  ## to make it go faster.
-
-CMD_PREFIX  = "+" ## Change this to change what triggers the bot responds to
-                  ## A one letter thing works best.
-
-SILENT_MODE = False ## If True, the bot will only send error messages
-                    ## ie: failed copy/paste/backup/restore
-
-###########################################################
-##        USER-CONFIGURATION SECTION ENDS HERE           ##
-##   If you don't know what you're doing, don't change   ##
-##   anything below this line. If you do, you are 100%   ##
-##     on your own (unless it's a genuine programming    ##
-##                      question).                       ##
-###########################################################
+sys.path.append(os.path.abspath(os.path.dirname(sys.executable)))
+print sys.path
+from config import *
 
 stored = False
 
@@ -164,24 +144,8 @@ class SayAction(Action):
 class DrawBot:
     def __init__(self,bot):
         self.bot = bot
-        self.valid_blocks = [1,3,4,5,6,12,13,14,15,16,17,18,19,20,21,22,23,24,
-                             25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,
-                             41,42,44,45,46,47,48,49 ]
-        self.block_names  = { "stone":1, "dirt":3, "cobblestone":4, "wood":5,
-                              "sappling":6, "tree":6, "sand":12, "gravel":13,
-                              "gold":14, "goldore":14, "iron":15, "ironore":15,
-                              "coal":16, "treetrunk":17, "trunk":17, "leaves":18,
-                              "sponge":19, "glass":20, "red":21, "orange":22,
-                              "yellow":23, "lightgreen":24, "green":25, "aqua":26,
-                              "aquagreen":26, "cyan":27, "blue":28, "purple":29,
-                              "indigo":30, "violet":31, "magenta":32, "pink":33,
-                              "black":34, "grey":35, "white":36, "yellow flower":37,
-                              "rose":38, "redrose":38, "redflower":38,
-                              "red mushroom":39, "brown mushroom":40, "gold block":41,
-                              "ironblock":42, "stair":44, "brick":45, "tnt":46,
-                              "bookcase":47, "mossy cobblestone":48, "green cobblestone":48,
-                              "obsidian":49,"blank":0
-                        }
+        self.valid_blocks = valid_blocks ## Loaded from config.py
+        self.block_names  = block_names  ## Loaded from config.py
 
                         ######         012345678901234567890123456789012345678901234567890/50
         self.cmd_help   = {"cuboid"    :"cuboid <type> - draws a 3D shape of blocks <type>",
@@ -239,7 +203,7 @@ class DrawBot:
 
         ## This strips anything like a title from a person's name
         ## ie: (Builder) Inside, <Builder> Inside, [Dev] InsideInside
-        user = re.sub("[<([].*?[])>]*[ ]*",'',user)
+        user = re.sub("[<([].*?[])>][ ]*",'',user)
 
         msg   = words[1]
 
@@ -683,8 +647,12 @@ class DrawBot:
         while len(self.blocks):
             block = self.blocks.pop(0)
 
-            offset = self.bot.calculateOffset(*block[1:])
-            current_tile = int(self.bot.block_array[offset])
+            try:
+                offset = self.bot.calculateOffset(*block[1:])
+                current_tile = int(self.bot.block_array[offset])
+            except IndexError as e:
+                ## Out of bounds error
+                continue
 
             ## No point in overwriting something if it's already there.
             if (current_tile == block[0]):
@@ -781,6 +749,7 @@ class MinecraftBot:
         return MinecraftBot.INVALID_PLAYER
 
     def onServerJoin(self, version, srv_name, motd, user_type):
+        self.loading_map = True
         self.reset()
         print "Joined server! Ver: %s, Name: %s, Motd: %s, Your type: %s"%(version,srv_name,motd,user_type)
 
@@ -789,7 +758,6 @@ class MinecraftBot:
 
     def onLevelStart(self): ## no actual data sent along with this
         print "Receiving level data"
-        self.loading_map = True
 
     def onLevelData(self,length,data,percent_complete): ##
         self.level_data += data
@@ -848,11 +816,17 @@ class MinecraftBot:
         return math.sqrt( (x2-x1)**2 + (y2-y1)**2 + (z2-z1)**2)
 
     def calculateOffset(self,x,y,z):
+        if ((x < 0) or (x > self.level_x) or
+            (y < 0) or (y > self.level_y) or
+            (z < 0) or (z > self.level_z)):
+                raise IndexError("Out of bounds")
+
         return y*(self.level_x * self.level_z) + z*self.level_z + x
 
     def onSetBlock(self,type,x,y,z):
-        if not self.block_array or self.loading_map:
+        if (not self.block_array) or (self.loading_map):
             self.building_queue.append( (type,x,y,z) )
+            return
 
         self.bot.onSetBlock(type,x,y,z)
         offset = self.calculateOffset(x,y,z)
@@ -955,7 +929,7 @@ class MinecraftBot:
                          ##     ^- 0x01 is set block
 
     def sendMessage(self,msg,ignorable=False):
-        if SILENT_MODE and ignorable:
+        if not (SILENT_MODE and ignorable):
             self.protocol.sendMessage(msg)
 
 class MinecraftBotProtocol(Protocol):
