@@ -2,7 +2,7 @@
 ##             USER-CONFIGURATION SECTION                ##
 ###########################################################
 
-BUILD_SPEED = .1  ## This is the time between actions.
+BUILD_SPEED = .15  ## This is the time between actions.
                   ## increase this number to make the bot go slower, decrease it
                   ## to make it go faster.
 
