@@ -1154,5 +1154,12 @@ class MinecraftBotClientFactory(ClientFactory):
         reactor.stop()
 
 print "Running bot"
+
+if not server:
+    print "Couldn't retrieve information about the server from minecraft.net"
+    print "This means that either: a) The server is down "
+    print "                     or b) The hash is incorrect."
+    print "http://minecraft.net/play.jsp?server=72d0bc9151c52126c8f45171b0e2f107"
+    print "                                     <  this part here is the hash  >"
 reactor.connectTCP(server,port,MinecraftBotClientFactory())
 reactor.run()
