@@ -188,7 +188,7 @@ class DrawBot:
         try:
             with open("users.txt", "r") as f:
                 for line in f:
-                    if line.strip('\n') == user:
+                    if line.strip('\n').lower() == user:
                         return True
             return False
         except:
@@ -829,7 +829,12 @@ class MinecraftBot:
             return
 
         self.bot.onSetBlock(type,x,y,z)
-        offset = self.calculateOffset(x,y,z)
+        try:
+            offset = self.calculateOffset(x,y,z)
+        except:
+            print "Received out of bounds setBlock (changing maps?)"
+            self.building_queue.append( (type,x,y,z))
+            return
 
         ## I'm assuming that the server is just sending new block data ahead of time
         ## and will actually send more blocks in the future.
