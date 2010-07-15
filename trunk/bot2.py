@@ -158,9 +158,9 @@ class DrawBot:
                            "backup"    :"backup <filename> - backs the map up to a file",
                            "restore"   :"restore <filename> - restores to a backup",
                            "sponge"    :"sponge - helps with water cleanup.",
-                           "erase"     :"erase <type> - erases blocks of that type"
+                           "erase"     :"erase <type> - erases blocks of that type",
+                           "say"       :"say <msg> - Makes the bot say something."
                            ##"replace"   :"replace <old>,<new> - replaces with new tiles",
-                           ##"say"       :"say <msg> - Makes the bot say something."
                            }
 
         self.onReset(silent=True)
@@ -188,7 +188,7 @@ class DrawBot:
         try:
             with open("users.txt", "r") as f:
                 for line in f:
-                    if line == user:
+                    if line.strip('\n') == user:
                         return True
             return False
         except:
@@ -819,7 +819,7 @@ class MinecraftBot:
         if ((x < 0) or (x > self.level_x) or
             (y < 0) or (y > self.level_y) or
             (z < 0) or (z > self.level_z)):
-                raise IndexError("Out of bounds")
+                raise IndexError(" (%s,%s,%s) is out of bounds"%(x,y,z))
 
         return y*(self.level_x * self.level_z) + z*self.level_z + x
 
