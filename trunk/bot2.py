@@ -825,6 +825,7 @@ class MinecraftBot:
 
     def onSetBlock(self,type,x,y,z):
         if (not self.block_array) or (self.loading_map):
+            print "Saved block for later building."
             self.building_queue.append( (type,x,y,z) )
             return
 
@@ -839,6 +840,7 @@ class MinecraftBot:
         ## I'm assuming that the server is just sending new block data ahead of time
         ## and will actually send more blocks in the future.
         if offset > len(self.block_array) - 1:
+            print "Saved block for later building"
             self.building_queue.append( (type,x,y,z))
         else:
             self.block_array[ offset ] = type
@@ -1044,7 +1046,7 @@ class MinecraftBotProtocol(Protocol):
             level_data   = d[1]
 
             print "Level chunk length: %s"%length
-            ##level_data   = d[1][:length]
+            level_data   = d[1][:length]
 
             completeness = d[2]
             self.bot.onLevelData(length,level_data,completeness)
