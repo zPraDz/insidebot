@@ -816,9 +816,11 @@ class MinecraftBot:
         return math.sqrt( (x2-x1)**2 + (y2-y1)**2 + (z2-z1)**2)
 
     def calculateOffset(self,x,y,z):
-        if ((x < 0) or (x > self.level_x) or
+        ## Okay, I don't know why, but.... x is z and z is x.
+        ## yes, weird, I know.
+        if ((x < 0) or (z > self.level_x) or
             (y < 0) or (y > self.level_y) or
-            (z < 0) or (z > self.level_z)):
+            (z < 0) or (x > self.level_z)):
                 raise IndexError(" (%s,%s,%s) is out of bounds"%(x,y,z))
 
         return y*(self.level_x * self.level_z) + z*self.level_z + x
