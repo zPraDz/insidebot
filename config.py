@@ -16,7 +16,7 @@ SILENT_MODE = False ## If True, the bot will only send error messages
 valid_blocks = [1,3,4,5,6,12,13,14,15,16,17,18,19,20,21,22,23,24,
                              25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,
                              41,42,44,45,46,47,48,49 ]
-block_names  = { "stone":1, "dirt":3, "cobblestone":4, "wood":5,
+block_names  = {              "stone":1, "dirt":3, "cobblestone":4, "wood":5,
                               "sappling":6, "tree":6, "sand":12, "gravel":13,
                               "gold":14, "goldore":14, "iron":15, "ironore":15,
                               "coal":16, "treetrunk":17, "trunk":17, "leaves":18,
