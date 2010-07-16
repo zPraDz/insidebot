@@ -159,7 +159,9 @@ class DrawBot:
                            "restore"   :"restore <filename> - restores to a backup",
                            "sponge"    :"sponge - helps with water cleanup.",
                            "erase"     :"erase <type> - erases blocks of that type",
-                           "say"       :"say <msg> - Makes the bot say something."
+                           "say"       :"say <msg> - Makes the bot say something.",
+                           "p1"        :"p1 - sets point 1 in lieu of mushroom.",
+                           "p2"        :"p2 - sets point 2 in lieu of mushroom."
                            ##"replace"   :"replace <old>,<new> - replaces with new tiles",
                            }
 
@@ -231,6 +233,10 @@ class DrawBot:
                 self.onGoAway()
             elif msg == CMD_PREFIX + "sponge":
                 self.onSponge(user)
+            elif msg == CMD_PREFIX + "p1":
+                self.onSetPoint(user,1)
+            elif msg == CMD_PREFIX + "p2":
+                self.onSetPoint(user,2)
             elif msg.replace(CMD_PREFIX,'') in self.cmd_help:
                 self.onHelp(msg.replace(CMD_PREFIX,''))
         else:
@@ -259,6 +265,49 @@ class DrawBot:
                 self.onReplace(user,arg)
             elif cmd == CMD_PREFIX + "say":
                 self.onSay(user,arg)
+
+    def onSetPoint(self,user,point_num):
+        if not self.mode:
+            self.bot.sendMessage("Nothing to set a point for",ignorable=True)
+            return
+
+        if not self.user == user:
+            self.bot.sendMessage("Someone else is using the bot. Use %sreset to reset."%CMD_PREFIX)
+            return
+
+        pid = self.bot.hasPlayer(user)
+        if pid == MinecraftBot.INVALID_PLAYER:
+            self.bot.sendMessage("You are not in the map (somehow..)")
+            return
+
+        p = self.bot.players[pid]
+        if point_num == 1:
+            self.first_pos = ( int(p.x), int(p.y), int(p.z) )
+            self.bot.sendMessage("Point 1 set.",ignorable=True)
+        elif point_num == 2:
+            self.second_pos = ( int(p.x) , int(p.y) , int(p.z) )
+            self.bot.sendMessage("Point 2 set",ignorable=True)
+
+        if self.first_pos and self.mode == "paste":
+            self.Paste()
+            self.onReset(silent=True)
+            return
+
+        if self.first_pos and self.second_pos:
+            if self.mode == "line":
+                self.DrawLine()
+            elif self.mode == "cuboid":
+                self.DrawCuboid()
+            elif self.mode == "copy":
+                self.Copy()
+            elif self.mode == "restore":
+                self.Restore()
+            elif self.mode == "sponge":
+                self.Sponge()
+            elif self.mode == "erase":
+                self.Erase()
+            self.onReset(silent=True)
+
 
     def onSay(self,user,arg):
         self.bot.sendMessage(arg)
@@ -938,7 +987,7 @@ class MinecraftBot:
                          ##     ^- 0x01 is set block
 
     def sendMessage(self,msg,ignorable=False):
-        if not (SILENT_MODE and ignorable):
+        if not (SILENT_MODE and ignorable) and not ABSOLUTE_SILENT_MODE:
             self.protocol.sendMessage(msg)
 
 class MinecraftBotProtocol(Protocol):
@@ -1160,6 +1209,6 @@ if not server:
     print "This means that either: a) The server is down "
     print "                     or b) The hash is incorrect."
     print "http://minecraft.net/play.jsp?server=72d0bc9151c52126c8f45171b0e2f107"
-    print "                                     <  this part here is the hash  >"
+    print "                                     <  this part here is the hash  > "
 reactor.connectTCP(server,port,MinecraftBotClientFactory())
 reactor.run()
